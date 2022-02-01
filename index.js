@@ -4,18 +4,17 @@ const morgan = require('morgan');
 const app = express();
 
 //i use this middleware to parse the incoming request to json
+app.use(express.static('build'))
 app.use(cors());
 app.use(express.json());
 
-morgan.token('body', (req, res) => JSON.stringify(req.body));
-
-app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body', {
-  skip: (req, res)  => req.method !== 'POST'
-}))
-app.use(morgan('tiny', {
-  skip: (req, res)  => req.post === 'POST'
-}))
-
+morgan.token('body', (req, res) => {
+  if(Object.getOwnPropertyNames(req.body).length !== 0){
+    return JSON.stringify(req.body);
+  }
+  return null;
+});
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
 let persons = [
   {
