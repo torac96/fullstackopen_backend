@@ -1,6 +1,8 @@
+require('dotenv').config()
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const Person = require('./models/note')
 const app = express();
 
 //i use this middleware to parse the incoming request to json
@@ -9,74 +11,41 @@ app.use(cors());
 app.use(express.json());
 
 morgan.token('body', (req, res) => {
-  if(Object.getOwnPropertyNames(req.body).length !== 0){
+  if (Object.getOwnPropertyNames(req.body).length !== 0) {
     return JSON.stringify(req.body);
   }
   return null;
 });
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
-let persons = [
-  {
-    "id": 1,
-    "name": "Arto Hellas",
-    "phone": "040-123456"
-  },
-  {
-    "id": 2,
-    "name": "Ada Lovelace",
-    "phone": "39-44-5323523"
-  },
-  {
-    "id": 3,
-    "name": "Dan Abramov",
-    "phone": "12-43-234345"
-  },
-  {
-    "id": 4,
-    "name": "Mary Poppendieck",
-    "phone": "39-23-6423122"
-  }
-];
-
 app.get('/info', (request, response) => {
-  const text = `
-  Phonebook has info for ${persons.length} people <br><br>
-
-  ${new Date().toString()}
-  `;
-  response.send(text);
+  Person.find({}).then(person => {
+    const text = `Phonebook has info for ${person.length} people <br><br>
+    ${new Date().toString()}`;
+    response.send(text);
+  })
 })
 
 //Handle the get all people request and retrive persons resource
 app.get('/api/persons', (request, response) => {
-  response.json(persons);
+  Person.find({}).then(persons => {
+    response.json(persons)
+  })
 });
 
 app.get('/api/persons/:id', (request, response) => {
-  const id = Number(request.params.id);
-  const person = persons.find(person => person.id === id);
-  if(person){
-    response.json(person);
-  }else{
-    response.status(404).end();
-  }
+  Person.findById(request.params.id).then(person => {
+    response.json(nopersonte)
+  })
 });
 
 app.delete('/api/persons/:id', (request, response) => {
-  const id = Number(request.params.id)
-  const person = persons.find(person => person.id === id);
-  if(person){
-    persons = persons.filter(person => person.id !== id)
+  Person.findByIdAndRemove(request.params.id).then(person => {
     response.status(204).end()
-  }else{
+  }).catch((error) => {
     response.status(404).end();
-  }
+  })
 })
-
-function getRandomInt() {
-  return Math.floor(Math.random() * 999999999999999);
-}
 
 app.post('/api/persons', (request, response) => {
   const body = request.body
@@ -86,26 +55,29 @@ app.post('/api/persons', (request, response) => {
       error: 'content missing'
     })
   }
-  if(persons.some(person => person.name === body.name)){
-    return response.status(400).json({
-      error: 'name must be unique'
-    })
-  }
-
-  const person = {
+  
+  const person = Person({
     name: body.name,
     phone: body.phone,
-    id: getRandomInt(),
-  }
+  })
 
-  persons = persons.concat(person)
+  Person.find({}).then(persons => {
+    
+    if (persons.some(person => person.name === body.name)) {
+      return response.status(400).json({
+        error: 'name must be unique'
+      })
+    }
 
-  response.json(person)
+    person.save().then(savedPerson => {
+      response.json(savedPerson)
+    })
+  })
 })
 
 
 //handle all the requests that come to PORT 3001
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
