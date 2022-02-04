@@ -2,7 +2,7 @@ require('dotenv').config()
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-const Person = require('./models/note')
+const Person = require('./models/person')
 const app = express();
 
 //i use this middleware to parse the incoming request to json
@@ -19,7 +19,7 @@ morgan.token('body', (req, res) => {
 
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
-app.get('/info', (request, response) => {
+app.get('/info', (request, response, next) => {
   Person.find({}).then(person => {
     const text = `Phonebook has info for ${person.length} people <br><br>
     ${new Date().toString()}`;
@@ -28,19 +28,19 @@ app.get('/info', (request, response) => {
 })
 
 //Handle the get all people request and retrive persons resource
-app.get('/api/persons', (request, response) => {
+app.get('/api/persons', (request, response, next) => {
   Person.find({}).then(persons => {
     response.json(persons)
   }).catch(error => next(error))
 });
 
-app.get('/api/persons/:id', (request, response) => {
+app.get('/api/persons/:id', (request, response, next) => {
   Person.findById(request.params.id).then(person => {
     response.json(nopersonte)
   }).catch(error => next(error))
 });
 
-app.delete('/api/persons/:id', (request, response) => {
+app.delete('/api/persons/:id', (request, response, next) => {
   Person.findByIdAndRemove(request.params.id).then(person => {
     if (person) {
       response.status(204).end()
@@ -50,33 +50,22 @@ app.delete('/api/persons/:id', (request, response) => {
   }).catch(error => next(error))
 })
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
   const body = request.body
-
-  if (!body.name && !body.phone) {
-    return response.status(400).json({
-      error: 'content missing'
-    })
-  }
 
   const person = Person({
     name: body.name,
     phone: body.phone,
   })
 
-  person.save().then(savedPerson => {
-    response.json(savedPerson)
-  }).catch(error => next(error))
+  person.save()
+  .then(savedPerson => savedPerson.toJSON())
+  .then(savedPersonFormatted => response.json(savedPersonFormatted))
+  .catch(error => next(error))
 })
 
 app.put('/api/persons/:id', (request, response, next) => {
   const body = request.body
-
-  if (!body.name && !body.phone) {
-    return response.status(400).json({
-      error: 'content missing'
-    })
-  }
 
   const person = {
     name: body.name,
@@ -84,8 +73,8 @@ app.put('/api/persons/:id', (request, response, next) => {
   }
 
   Person.findByIdAndUpdate(request.params.id, person, { new: true })
-    .then(updatedNote => {
-      response.json(updatedNote)
+    .then(updatedPerson => {
+      response.json(updatedPerson)
     })
     .catch(error => next(error))
 })
@@ -95,6 +84,8 @@ const errorHandler = (error, request, response, next) => {
 
   if (error.name === 'CastError') {
     return response.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message })
   }
 
   next(error)
