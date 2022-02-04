@@ -1,29 +1,29 @@
 require('dotenv').config()
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
+const express = require('express')
+const cors = require('cors')
+const morgan = require('morgan')
 const Person = require('./models/person')
-const app = express();
+const app = express()
 
 //i use this middleware to parse the incoming request to json
 app.use(express.static('build'))
-app.use(cors());
-app.use(express.json());
+app.use(cors())
+app.use(express.json())
 
-morgan.token('body', (req, res) => {
+morgan.token('body', (req) => {
   if (Object.getOwnPropertyNames(req.body).length !== 0) {
-    return JSON.stringify(req.body);
+    return JSON.stringify(req.body)
   }
-  return null;
-});
+  return null
+})
 
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
 app.get('/info', (request, response, next) => {
   Person.find({}).then(person => {
     const text = `Phonebook has info for ${person.length} people <br><br>
-    ${new Date().toString()}`;
-    response.send(text);
+    ${new Date().toString()}`
+    response.send(text)
   }).catch(error => next(error))
 })
 
@@ -32,20 +32,20 @@ app.get('/api/persons', (request, response, next) => {
   Person.find({}).then(persons => {
     response.json(persons)
   }).catch(error => next(error))
-});
+})
 
 app.get('/api/persons/:id', (request, response, next) => {
   Person.findById(request.params.id).then(person => {
-    response.json(nopersonte)
+    response.json(person)
   }).catch(error => next(error))
-});
+})
 
 app.delete('/api/persons/:id', (request, response, next) => {
   Person.findByIdAndRemove(request.params.id).then(person => {
     if (person) {
       response.status(204).end()
     } else {
-      response.status(404).end();
+      response.status(404).end()
     }
   }).catch(error => next(error))
 })
@@ -59,9 +59,9 @@ app.post('/api/persons', (request, response, next) => {
   })
 
   person.save()
-  .then(savedPerson => savedPerson.toJSON())
-  .then(savedPersonFormatted => response.json(savedPersonFormatted))
-  .catch(error => next(error))
+    .then(savedPerson => savedPerson.toJSON())
+    .then(savedPersonFormatted => response.json(savedPersonFormatted))
+    .catch(error => next(error))
 })
 
 app.put('/api/persons/:id', (request, response, next) => {
@@ -95,6 +95,7 @@ const errorHandler = (error, request, response, next) => {
 app.use(errorHandler)
 
 //handle all the requests that come to PORT 3001
+// eslint-disable-next-line no-undef
 const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
